@@ -48,7 +48,7 @@ class MainActivity: FlutterActivity() {
                     result(enabled)
                 }
                 "getInstalledApps" -> {
-                    val apps = getInstalledApps(context, packageManager)
+                    val apps = getInstalledApps(context)
                     result(apps)
                 }
                 else -> result(null)
@@ -133,8 +133,9 @@ class MainActivity: FlutterActivity() {
         return result
     }
 
-    private fun getInstalledApps(context: Context, packageManager: PackageManager): List<Map<String, String>> {
+    private fun getInstalledApps(context: Context): List<Map<String, String>> {
         val apps = mutableListOf<Map<String, String>>()
+        val packageManager: PackageManager = context.packageManager
         val installedPackages = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
 
         for (appInfo in installedPackages) {
