@@ -12,44 +12,66 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel.Result
 
-class MainActivity: FlutterActivity() {
+class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.focusblocker/blocking"
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        val context: Context = this
-        val packageManager: PackageManager = this.packageManager
-
+        
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "startBlocking" -> {
-                    val packageNames = call.argument<List<String>>("packageNames") ?: emptyList()
-                    val startTime = call.argument<Long>("startTime") ?: 0L
-                    val endTime = call.argument<Long>("endTime") ?: 0L
-                    val strictMode = call.argument<Boolean>("strictMode") ?: false
+                    try {
+                        val packageNames = call.argument<List<String>>("packageNames") ?: emptyList()
+                        val startTime = call.argument<Long>("startTime") ?: 0L
+                        val endTime = call.argument<Long>("endTime") ?: 0L
+                        val strictMode = call.argument<Boolean>("strictMode") ?: false
 
-                    startBlocking(packageNames, startTime, endTime, strictMode, context, packageManager)
-                    result(true)
+                        startBlocking(packageNames, startTime, endTime, strictMode)
+                        result(true)
+                    } catch (e: Exception) {
+                        result(false)
+                    }
                 }
                 "stopBlocking" -> {
-                    stopBlocking(context)
-                    result(true)
+                    try {
+                        stopBlocking()
+                        result(true)
+                    } catch (e: Exception) {
+                        result(false)
+                    }
                 }
                 "getBlockingStatus" -> {
-                    val status = getBlockingStatus(context)
-                    result(status)
+                    try {
+                        val status = getBlockingStatus()
+                        result(status)
+                    } catch (e: Exception) {
+                        result(mapOf("error" to e.message))
+                    }
                 }
                 "enableAccessibilityService" -> {
-                    openAccessibilitySettings(context)
-                    result(true)
+                    try {
+                        openAccessibilitySettings()
+                        result(true)
+                    } catch (e: Exception) {
+                        result(false)
+                    }
                 }
                 "isAccessibilityServiceEnabled" -> {
-                    val enabled = isAccessibilityServiceEnabled(context)
-                    result(enabled)
+                    try {
+                        val enabled = isAccessibilityServiceEnabled()
+                        result(enabled)
+                    } catch (e: Exception) {
+                        result(false)
+                    }
                 }
                 "getInstalledApps" -> {
-                    val apps = getInstalledApps(context)
-                    result(apps)
+                    try {
+                        val apps = getInstalledApps()
+                        result(apps)
+                    } catch (e: Exception) {
+                        result(emptyList<List<Map<String, String>>>())
+                    }
                 }
                 else -> result(null)
             }
@@ -60,12 +82,10 @@ class MainActivity: FlutterActivity() {
         packageNames: List<String>,
         startTime: Long,
         endTime: Long,
-        strictMode: Boolean,
-        context: Context,
-        packageManager: PackageManager
+        strictMode: Boolean
     ) {
         // Save configuration to SharedPreferences
-        val sharedPref = context.getSharedPreferences("blocking_config", Context.MODE_PRIVATE)
+        val sharedPref = getSharedPreferences("blocking_config", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
             putStringSet("blocked_packages", packageNames.toSet())
             putLong("start_time", startTime)
@@ -76,7 +96,7 @@ class MainActivity: FlutterActivity() {
         }
 
         // Start the foreground service
-        val serviceIntent = Intent(context, AppBlockingService::class.java)
+        val serviceIntent = Intent(this, AppBlockingService::class.java)
         serviceIntent.action = AppBlockingService.ACTION_START_BLOCKING
         serviceIntent.putStringArrayListExtra("blocked_packages", ArrayList(packageNames))
         serviceIntent.putExtra("start_time", startTime)
@@ -84,26 +104,26 @@ class MainActivity: FlutterActivity() {
         serviceIntent.putExtra("strict_mode", strictMode)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(serviceIntent)
+            startForegroundService(serviceIntent)
         } else {
-            context.startService(serviceIntent)
+            startService(serviceIntent)
         }
     }
 
-    private fun stopBlocking(context: Context) {
-        val sharedPref = context.getSharedPreferences("blocking_config", Context.MODE_PRIVATE)
+    private fun stopBlocking() {
+        val sharedPref = getSharedPreferences("blocking_config", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
             putBoolean("is_active", false)
             apply()
         }
 
-        val serviceIntent = Intent(context, AppBlockingService::class.java)
+        val serviceIntent = Intent(this, AppBlockingService::class.java)
         serviceIntent.action = AppBlockingService.ACTION_STOP_BLOCKING
-        context.stopService(serviceIntent)
+        stopService(serviceIntent)
     }
 
-    private fun getBlockingStatus(context: Context): Map<String, Any> {
-        val sharedPref = context.getSharedPreferences("blocking_config", Context.MODE_PRIVATE)
+    private fun getBlockingStatus(): Map<String, Any> {
+        val sharedPref = getSharedPreferences("blocking_config", Context.MODE_PRIVATE)
         return mapOf(
             "isActive" to (sharedPref.getBoolean("is_active", false)),
             "blockedPackages" to (sharedPref.getStringSet("blocked_packages", emptySet()) ?: emptySet()),
@@ -113,17 +133,17 @@ class MainActivity: FlutterActivity() {
         )
     }
 
-    private fun openAccessibilitySettings(context: Context) {
+    private fun openAccessibilitySettings() {
         val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        context.startActivity(intent)
+        startActivity(intent)
     }
 
-    private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val service = "${context.packageName}/.CustomAccessibilityService"
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val service = "${packageName}/.CustomAccessibilityService"
         var result = false
         try {
             val enabled = android.provider.Settings.Secure.getString(
-                context.contentResolver,
+                contentResolver,
                 android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
             )
             result = enabled?.contains(service) ?: false
@@ -133,9 +153,8 @@ class MainActivity: FlutterActivity() {
         return result
     }
 
-    private fun getInstalledApps(context: Context): List<Map<String, String>> {
+    private fun getInstalledApps(): List<Map<String, String>> {
         val apps = mutableListOf<Map<String, String>>()
-        val packageManager: PackageManager = context.packageManager
         val installedPackages = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
 
         for (appInfo in installedPackages) {
@@ -145,7 +164,7 @@ class MainActivity: FlutterActivity() {
                 val packageName = appInfo.packageName
                 
                 // Skip the app itself
-                if (packageName != context.packageName) {
+                if (packageName != packageName) {
                     apps.add(
                         mapOf(
                             "appName" to appName,
