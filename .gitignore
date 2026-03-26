@@ -1,0 +1,62 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+*.iml
+build/
+.gradle/
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+
+# Web
+web/
+.web/
+
+# macOS
+macos/Pods/
+macos/Podfile.lock
+
+# Windows
+windows/flutter/generated_plugins.cmake
+windows/flutter/generated_property_bundle.cmake
+windows/flutter/generated/
+windows/flutter/flutter_export.h
+windows/flutter/flutter_export.c
+
+# Linux
+linux/flutter/generated_plugins.cmake
+linux/flutter/generated/
+
+# Generated
+*.g.dart
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Build output
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Logs
+*.log

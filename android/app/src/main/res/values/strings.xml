@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FocusBlocker</string>
+    <string name="app_blocked">App Blocked</string>
+    <string name="close">Close</string>
+</resources>
